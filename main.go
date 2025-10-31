@@ -21,7 +21,13 @@ func main() {
 		if err != nil {
 			log.Fatal("Invalid amount")
 		}
-		categories := os.Args[7:]
+		var categories []string
+		if len(os.Args) == 6 {
+			categories = make([]string, 0)
+		} else {
+			categories = os.Args[7:]
+		}
+
 		if err := manager.Add(description, amount, categories); err != nil {
 			if errors.Is(err, expenses.ErrNOM) {
 				log.Println("Failed to add expense")
@@ -31,42 +37,65 @@ func main() {
 		}
 	case "list":
 		if len(os.Args) == 2 {
-			manager.List()
+			categories := make([]string, 0)
+			manager.List(categories)
 		} else {
-			month,err := strconv.Atoi(os.Args[4])
-			if err != nil{
-				log.Fatal("Invalid month")
+			var categories []string
+			if os.Args[2] == "--month" {
+				month, err := strconv.Atoi(os.Args[3])
+				if len(os.Args) == 4 {
+					categories = make([]string, 0)
+				} else {
+					categories = os.Args[5:]
+				}
+				if err != nil {
+					log.Fatal("Invalid month")
+				}
+				manager.ListMonth(time.Month(month), categories)
+			} else if os.Args[2] == "--tags"{
+				categories = os.Args[3:]
+				manager.List(categories)
 			}
-			
-			manager.ListMonth(time.Month(month))
 
 		}
 	case "summary":
-		if len(os.Args) == 2{
-			fmt.Printf("Total expenses: %d\n",manager.GetTotal())
-		}else{
-			month,err := strconv.Atoi(os.Args[3])
-			if err != nil{
+		if len(os.Args) == 2 {
+			fmt.Printf("Total expenses: %d\n", manager.GetTotal())
+		} else {
+			month, err := strconv.Atoi(os.Args[3])
+			if err != nil {
 				log.Fatal("Invalid month")
 			}
-			summary, err := manager.GetMonthSummary(time.Month(month));
-			if err != nil{
+			summary, err := manager.GetMonthSummary(time.Month(month))
+			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("Total Expenses for %s: %d",time.Month(month).String(),summary)
+			fmt.Printf("Total Expenses for %s: %d", time.Month(month).String(), summary)
 		}
 	case "delete":
 		id, err := strconv.Atoi(os.Args[3])
-		if err != nil{
+		if err != nil {
 			log.Fatal("Invalid id")
 		}
 		manager.Delete(id)
 	case "config-budget":
-		amount,err := strconv.Atoi(os.Args[3])
-		if err != nil{
+		amount, err := strconv.Atoi(os.Args[3])
+		if err != nil {
 			log.Fatal("Invalid amount")
 		}
 		manager.ConfigBudget(amount)
+	case "budget":
+		var month time.Month
+		if len(os.Args) == 2{
+			month = expenses.GetMonth()
+		}else{
+			temp, err := strconv.Atoi(os.Args[3])
+			if err != nil{
+				log.Fatal(err)
+			}
+			month = time.Month(temp)
+		}
+		manager.Budget(month)
 	}
 
 }

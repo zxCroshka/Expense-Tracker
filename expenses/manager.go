@@ -3,6 +3,7 @@ package expenses
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -28,6 +29,13 @@ func (m *ExpenseManager) ConfigBudget(amount int) {
 	}
 }
 
+func (m *ExpenseManager) Budget(month time.Month) {
+	if err := JSONtoStruct(&m); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Budget for %s: %d\n", month.String(), m.MonthExpenses[month].Budget)
+}
+
 func (m *ExpenseManager) Add(Description string, Amount int, Categories []string) error {
 	if err := CreateIfNotExists("expenses.json"); err != nil {
 		log.Fatal(err)
@@ -36,8 +44,11 @@ func (m *ExpenseManager) Add(Description string, Amount int, Categories []string
 	if err := JSONtoStruct(&m); err != nil {
 		log.Fatal()
 	}
-
 	l := len(m.MonthExpenses[month].Expenses)
+	for k := range m.MonthExpenses[month].Expenses {
+		l = max(l, k)
+	}
+
 	if Amount <= m.MonthExpenses[month].Budget {
 		m.MonthExpenses[month].Expenses[l+1] = *NewExpense(Description, Amount, Categories)
 		m.MonthExpenses[month].Budget -= Amount
@@ -95,12 +106,11 @@ func (m *ExpenseManager) GetMonthSummary(month time.Month) (int, error) {
 	return v.Summary, nil
 }
 
-func (m *ExpenseManager) ListMonth(month time.Month) {
+func (m *ExpenseManager) ListMonth(month time.Month, categories []string) {
 	if err := JSONtoStruct(&m); err != nil {
 		log.Fatal(err)
 	}
 	keys := make([]int, 0)
-
 	for k := range m.MonthExpenses[month].Expenses {
 		keys = append(keys, k)
 	}
@@ -132,9 +142,28 @@ func (m *ExpenseManager) ListMonth(month time.Month) {
 		titles[3], strings.Repeat(" ", maxLen[3]-titleLens[3]),
 		titles[4], strings.Repeat(" ", maxLen[4]-titleLens[4]),
 	)
-
+	temp := make([]int, 0)
 	for i := 0; i < len(keys); i++ {
 		k := keys[i]
+		e := m.MonthExpenses[month].Expenses[k]
+		if len(categories) != 0 {
+			flag := true
+			for _, v := range categories {
+				if !slices.Contains(e.Category, v) || len(e.Category) == 0 {
+					flag = false
+					break
+				}
+			}
+			if flag {
+				temp = append(temp, k)
+			}
+		} else {
+			temp = keys
+		}
+	}
+
+	for i := 0; i < len(temp); i++ {
+		k := temp[i]
 		e := m.MonthExpenses[month].Expenses[k]
 		lens := m.MonthExpenses[month].ToLen(k)
 		fmt.Printf("%v%v  %v%v  %v%v  %v%v  %v%v\n",
@@ -147,10 +176,9 @@ func (m *ExpenseManager) ListMonth(month time.Month) {
 	}
 }
 
-func (m *ExpenseManager) List() {
-
+func (m *ExpenseManager) List(categories []string) {
 	for month := range m.MonthExpenses {
-		m.ListMonth(month)
+		m.ListMonth(month, categories)
 	}
 
 }
