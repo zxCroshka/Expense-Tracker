@@ -1,8 +1,10 @@
 package expenses
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -181,4 +183,58 @@ func (m *ExpenseManager) List(categories []string) {
 		m.ListMonth(month, categories)
 	}
 
+}
+
+func (m *ExpenseManager) CSVExport() error {
+
+	if err := CreateIfNotExists("expenses.csv"); err != nil {
+		log.Fatal(err)
+	}
+
+	file, err := os.OpenFile("expenses.csv", os.O_RDWR, 0777)
+	defer func(){
+		if err := file.Close(); err != nil{
+			log.Fatal(err)
+		}
+	}()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	if err := JSONtoStruct(&m); err != nil {
+		log.Fatal(err)
+	}
+
+	titles := []string{"ID", "Date", "Description", "Amount", "Categories"}
+	if err := writer.Write(titles); err != nil {
+		log.Fatal(err)
+	}
+	for month := range m.MonthExpenses {
+		keys := make([]int, 0)
+		for k := range m.MonthExpenses[month].Expenses {
+			keys = append(keys, k)
+		}
+		sort.Ints(keys)
+		for i := 0; i < len(keys); i++ {
+			k := keys[i]
+			e := m.MonthExpenses[month].Expenses[k]
+			curs := fmt.Sprintf("%v %v %v %v %v",
+				k,
+				e.Date,
+				e.Description,
+				e.Amount,
+				strings.Join(e.Category, ";"),
+			)
+			tmp := strings.Split(curs, " ")
+			if err := writer.Write(tmp); err != nil{
+				log.Fatal(err)
+			}
+		}
+		
+	}
+
+	log.Println("CSV file exported successfully, name of file: 'expenses.csv'")
+	return nil
 }

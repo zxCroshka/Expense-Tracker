@@ -1,3 +1,4 @@
 go.mod
 Expense-Tracker.exe
 expenses.json
+expenses.csv

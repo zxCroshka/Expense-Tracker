@@ -70,7 +70,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("Total Expenses for %s: %d", time.Month(month).String(), summary)
+			fmt.Printf("Total Expenses for %s: %d\n", time.Month(month).String(), summary)
 		}
 	case "delete":
 		id, err := strconv.Atoi(os.Args[3])
@@ -96,6 +96,11 @@ func main() {
 			month = time.Month(temp)
 		}
 		manager.Budget(month)
+	case "csv":
+		if err := manager.CSVExport(); err !=  nil{
+			
+			log.Fatal(err)
+		}
 	}
 
 }
